@@ -1,5 +1,43 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+
+
+def plot_learning_curves(model=None,
+                         x_lim=None, y_lim=None):
+    fig, ax = plt.subplots()
+    fig.set_size_inches(8, 4)
+
+    learning_path = model.loss_dict
+    plt.plot(learning_path.keys(), learning_path.values())
+    plt.title(f'model: {model.__class__.__name__}')
+    if x_lim or y_lim:
+        plt.xlim(x_lim[0], x_lim[1])
+        plt.ylim(y_lim[0], y_lim[1])
+
+    ax.set_xlabel('Номер итерации')
+    ax.set_ylabel('Среднеквадратическая ошибка')
+    ax.legend(['MSE: {}, {} итераций'.format(round(list(learning_path.values())[-1], ndigits=2),
+                                             list(learning_path.keys())[-1])])
+    plt.show()
+
+
+def plot_weight_curves(model=None):
+    fig, ax = plt.subplots()
+    fig.set_size_inches(12, 5)
+
+    learning_path = model.weight_dict
+    data = list(learning_path.values())
+
+    first_w0 = [item[0] for item in data]
+    second_w1 = [item[1] for item in data]
+
+    plt.title(f'Пути {model.__class__.__name__} в пространстве параметров')
+    plt.xlabel(r'$w_0$')
+    plt.ylabel(r'$w_1$')
+
+    plt.plot(first_w0, second_w1, 'o-', markersize=1)
+    plt.show()
 
 
 class MyLinearRegression:
@@ -36,6 +74,7 @@ class MyGradientLinearRegression(MyLinearRegression):
         self.weight = np.ones(self.samples.shape[1])
         self.print_cost = print_cost
         self.loss_dict = {}
+        self.weight_dict = {}
 
     def mean_squared_error(self):
         loss = self.samples @ self.weight - self.targets
@@ -61,6 +100,7 @@ class MyGradientLinearRegression(MyLinearRegression):
 
             current_cost = self.mean_squared_error()
             self.loss_dict[count] = current_cost
+            self.weight_dict[count] = self.weight
 
             if np.abs(current_cost - previous_cost) < self.diff_mse:
                 break
