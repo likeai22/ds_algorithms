@@ -10,7 +10,7 @@ def plot_learning_curves(model=None,
 
     learning_path = model.loss_dict
     plt.plot(learning_path.keys(), learning_path.values())
-    plt.title(f'model: {model.__class__.__name__}')
+    plt.title(f'Кривая обучения {model.__class__.__name__}')
     if x_lim or y_lim:
         plt.xlim(x_lim[0], x_lim[1])
         plt.ylim(y_lim[0], y_lim[1])
@@ -29,15 +29,29 @@ def plot_weight_curves(model=None):
     learning_path = model.weight_dict
     data = list(learning_path.values())
 
-    first_w0 = [item[0] for item in data]
-    second_w1 = [item[1] for item in data]
+    first_w0 = [item[1] for item in data]
+    second_w1 = [item[2] for item in data]
 
-    plt.title(f'$w_0$, $w_1$ {model.__class__.__name__}')
-    plt.xlabel(r'$w_0$')
-    plt.ylabel(r'$w_1$')
+    plt.title(f'$w_1$, $w_2$ {model.__class__.__name__}')
+    plt.xlabel(r'$w_1$')
+    plt.ylabel(r'$w_2$')
 
     plt.plot(first_w0, second_w1, 'o-', markersize=5)
     plt.show()
+
+
+def plot_weights(weights):
+    numbers = np.arange(0, len(weights))
+    tick_labels = ['w' + str(num) for num in numbers]
+    cc = [''] * len(numbers)
+    for n, val in enumerate(weights):
+        if val < 0:
+            cc[n] = 'red'
+        elif val >= 0:
+            cc[n] = 'blue'
+
+    plt.bar(x=numbers, height=weights, color=cc)
+    plt.xticks(np.arange(0, len(weights)), tick_labels)
 
 
 class MyLinearRegression:
@@ -85,11 +99,8 @@ class MyGradientLinearRegression(MyLinearRegression):
         return np.random.randn(weights_size) / np.sqrt(weights_size)
 
     def mean_squared_error(self):
-        yhat = self.forward()
+        yhat = self.predict()
         return np.square(yhat - self.targets).sum() / self.targets.size
-
-    def forward(self):
-        return np.dot(self.samples, self.weight)
 
     def update(self):
         return self.weight - self.alpha * self._calc_gradient()
@@ -100,9 +111,9 @@ class MyGradientLinearRegression(MyLinearRegression):
             self.weight = self.init(self.samples.shape[1])
 
         if self.fit_intercept:  # если задано смещение - задаем
-            self.samples = np.hstack((self.samples, np.ones((self.samples.shape[0], 1))))
-            self.weight = np.hstack((self.weight, self.init(1)))
+            self.weight = np.hstack((self.init(1), self.weight))
 
+        self.samples = np.hstack((np.ones((self.samples.shape[0], 1)), self.samples))
         previous_cost = self.mean_squared_error()
 
         self.loss_dict[0] = previous_cost
@@ -117,8 +128,7 @@ class MyGradientLinearRegression(MyLinearRegression):
             self.loss_dict[count] = current_cost
             self.weight_dict[count] = self.weight
 
-            # расстояние между векторами весов
-            weight_dist = np.sum(np.abs(self.weight_dict[count-1] - self.weight_dict[count]))
+            # weight_dist = np.sum(np.abs(self.weight_dict[count - 1] - self.weight_dict[count]))
 
             if np.abs(current_cost - previous_cost) < self.diff_mse:
                 print(f'Model alpha: {self.alpha}, diff_mse: {self.diff_mse}, iterations: {count} ...')
@@ -127,5 +137,6 @@ class MyGradientLinearRegression(MyLinearRegression):
             previous_cost = current_cost
 
     def _calc_gradient(self):
-        yhat = self.forward()
+        yhat = self.predict()
         return 2 * (yhat - self.targets) @ self.samples / self.samples.shape[0]
+
