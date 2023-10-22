@@ -5,3 +5,4 @@ pandas
 ipywidgets
 scikit-learn
 seaborn
+plotly

@@ -32,11 +32,11 @@ def plot_weight_curves(model=None):
     first_w0 = [item[0] for item in data]
     second_w1 = [item[1] for item in data]
 
-    plt.title(f'Пути {model.__class__.__name__} в пространстве параметров')
+    plt.title(f'$w_0$, $w_1$ {model.__class__.__name__}')
     plt.xlabel(r'$w_0$')
     plt.ylabel(r'$w_1$')
 
-    plt.plot(first_w0, second_w1, 'o-', markersize=1)
+    plt.plot(first_w0, second_w1, 'o-', markersize=5)
     plt.show()
 
 
@@ -46,10 +46,12 @@ class MyLinearRegression:
         self.weight = None
         self.fit_intercept = fit_intercept
         self.samples = samples.copy() if copy else samples
-        self.samples = np.hstack((self.samples, np.ones((self.samples.shape[0], 1))))
         self.targets = targets
 
     def fit(self):
+        if self.fit_intercept:
+            self.samples = np.hstack((self.samples, np.ones((self.samples.shape[0], 1))))
+
         self.weight = np.linalg.inv(
             self.samples.T @ self.samples) @ self.samples.T @ self.targets
         return self
@@ -66,49 +68,64 @@ class MyGradientLinearRegression(MyLinearRegression):
                  iters: int = int(1e6),
                  alpha: float = 1e-3,
                  diff_mse: float = 1e-5,
-                 print_cost: bool = False, **kwargs):
+                 print_cost: bool = False,
+                 random_state=42,
+                 **kwargs):
         super().__init__(**kwargs)
         self.iters = iters
         self.alpha = alpha
         self.diff_mse = diff_mse
-        self.weight = np.ones(self.samples.shape[1])
+        self.seed = random_state
         self.print_cost = print_cost
         self.loss_dict = {}
-        self.weight_dict = {}
+        self.weight_dict = {0: np.zeros(3)}
+
+    def init(self, weights_size):
+        np.random.seed(self.seed)
+        return np.random.randn(weights_size) / np.sqrt(weights_size)
 
     def mean_squared_error(self):
-        loss = self.samples @ self.weight - self.targets
-        return np.mean(np.square(loss))
+        yhat = self.forward()
+        return np.square(yhat - self.targets).sum() / self.targets.size
+
+    def forward(self):
+        return np.dot(self.samples, self.weight)
+
+    def update(self):
+        return self.weight - self.alpha * self._calc_gradient()
 
     def fit(self):
+
+        if self.weight is None:  # если веса не заданы - задаем
+            self.weight = self.init(self.samples.shape[1])
+
+        if self.fit_intercept:  # если задано смещение - задаем
+            self.samples = np.hstack((self.samples, np.ones((self.samples.shape[0], 1))))
+            self.weight = np.hstack((self.weight, self.init(1)))
+
         previous_cost = self.mean_squared_error()
-        current_cost = previous_cost
 
         self.loss_dict[0] = previous_cost
-
-        w = self.weight
-
         for count in range(1, self.iters + 1):
 
-            new_w = w - self.alpha * self._calc_gradient()
+            self.weight = self.update()
+            current_cost = self.mean_squared_error()
 
             if count % 100 == 0 and self.print_cost is True:
                 print(f"Cost at iteration {count} is {current_cost}, weight={self.weight}")
 
-            w = new_w
-            self.weight = w
-
-            current_cost = self.mean_squared_error()
             self.loss_dict[count] = current_cost
             self.weight_dict[count] = self.weight
 
+            # расстояние между векторами весов
+            weight_dist = np.sum(np.abs(self.weight_dict[count-1] - self.weight_dict[count]))
+
             if np.abs(current_cost - previous_cost) < self.diff_mse:
+                print(f'Model alpha: {self.alpha}, diff_mse: {self.diff_mse}, iterations: {count} ...')
                 break
 
             previous_cost = current_cost
 
-        print(f'Model alpha: {self.alpha}, diff_mse: {self.diff_mse}, iterations: {count} ...')
-
     def _calc_gradient(self):
-        pred = self.samples @ self.weight - self.targets
-        return 2 * pred @ self.samples / self.samples.shape[0]
+        yhat = self.forward()
+        return 2 * (yhat - self.targets) @ self.samples / self.samples.shape[0]
