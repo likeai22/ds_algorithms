@@ -17,8 +17,8 @@ def plot_learning_curves(model=None,
 
     ax.set_xlabel('Номер итерации')
     ax.set_ylabel('Функция потерь')
-    ax.legend(['MSE: {}, {} итераций'.format(round(list(learning_path.values())[-1], ndigits=2),
-                                             list(learning_path.keys())[-1])])
+    ax.legend(['Loss: {}, {} итераций'.format(round(list(learning_path.values())[-1], ndigits=2),
+                                              list(learning_path.keys())[-1])])
     plt.show()
 
 
