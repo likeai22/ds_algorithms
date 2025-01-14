@@ -1,8 +1,6 @@
 jupyter
-numpy
 matplotlib
 pandas
-ipywidgets
+torch
 scikit-learn
-seaborn
-plotly
+transformers
